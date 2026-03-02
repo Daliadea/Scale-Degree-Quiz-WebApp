@@ -121,7 +121,7 @@
     incorrect: 0,
     mistakes: [],
     currentQuestion: null,
-    selectedRoots: ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
+    selectedRoots: ['C'],
     selectedExtensions: ['b3', '3', '5', 'b7', '7'],
     challengeSecondsLeft: 0,
     challengeTimerId: null,
@@ -131,21 +131,27 @@
   };
 
   const STORAGE_KEY = 'scale-degree-quiz-settings';
+  const SETTINGS_VERSION = 2; // bump to apply new defaults (roots: C only; extensions: minor/major 3rd, 5th, minor/major 7th)
 
   function loadSettings() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const data = JSON.parse(raw);
-        if (Array.isArray(data.selectedRoots)) state.selectedRoots = data.selectedRoots;
-        if (Array.isArray(data.selectedExtensions)) state.selectedExtensions = data.selectedExtensions;
+        const version = data.settingsVersion || 1;
+        if (version >= SETTINGS_VERSION) {
+          if (Array.isArray(data.selectedRoots)) state.selectedRoots = data.selectedRoots;
+          if (Array.isArray(data.selectedExtensions)) state.selectedExtensions = data.selectedExtensions;
+        }
         if (data.theme === 'light' || data.theme === 'dark') state.theme = data.theme;
       }
     } catch (_) {}
+    saveSettings();
   }
 
   function saveSettings() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      settingsVersion: SETTINGS_VERSION,
       selectedRoots: state.selectedRoots,
       selectedExtensions: state.selectedExtensions,
       theme: state.theme,
@@ -345,6 +351,30 @@
     const extsEl = el('settings-extensions');
     rootsEl.innerHTML = '';
     extsEl.innerHTML = '';
+
+    const rootsToggleRow = document.createElement('div');
+    rootsToggleRow.className = 'settings-toggle-row';
+    const rootsOn = document.createElement('button');
+    rootsOn.type = 'button';
+    rootsOn.className = 'btn-link';
+    rootsOn.textContent = 'Turn on all';
+    rootsOn.addEventListener('click', () => {
+      state.selectedRoots = ROOTS.map(r => r.name);
+      renderSettingsCheckboxes();
+    });
+    const rootsOff = document.createElement('button');
+    rootsOff.type = 'button';
+    rootsOff.className = 'btn-link';
+    rootsOff.textContent = 'Turn off all';
+    rootsOff.addEventListener('click', () => {
+      state.selectedRoots = [];
+      renderSettingsCheckboxes();
+    });
+    rootsToggleRow.appendChild(rootsOn);
+    rootsToggleRow.appendChild(document.createTextNode(' · '));
+    rootsToggleRow.appendChild(rootsOff);
+    rootsEl.appendChild(rootsToggleRow);
+
     const naturalRoots = ROOTS.filter(r => ['C','D','E','F','G','A','B'].includes(r.name));
     const otherRoots = ROOTS.filter(r => !['C','D','E','F','G','A','B'].includes(r.name));
     [...naturalRoots, ...otherRoots].forEach(r => {
@@ -361,6 +391,30 @@
       label.appendChild(document.createTextNode(r.name));
       rootsEl.appendChild(label);
     });
+
+    const extsToggleRow = document.createElement('div');
+    extsToggleRow.className = 'settings-toggle-row';
+    const extsOn = document.createElement('button');
+    extsOn.type = 'button';
+    extsOn.className = 'btn-link';
+    extsOn.textContent = 'Turn on all';
+    extsOn.addEventListener('click', () => {
+      state.selectedExtensions = EXTENSIONS.map(e => e.id);
+      renderSettingsCheckboxes();
+    });
+    const extsOff = document.createElement('button');
+    extsOff.type = 'button';
+    extsOff.className = 'btn-link';
+    extsOff.textContent = 'Turn off all';
+    extsOff.addEventListener('click', () => {
+      state.selectedExtensions = [];
+      renderSettingsCheckboxes();
+    });
+    extsToggleRow.appendChild(extsOn);
+    extsToggleRow.appendChild(document.createTextNode(' · '));
+    extsToggleRow.appendChild(extsOff);
+    extsEl.appendChild(extsToggleRow);
+
     EXTENSIONS.forEach(ext => {
       const label = document.createElement('label');
       const input = document.createElement('input');

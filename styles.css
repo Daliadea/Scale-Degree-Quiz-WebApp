@@ -483,6 +483,27 @@ body {
   color: var(--text);
 }
 
+.settings-toggle-row {
+  width: 100%;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.btn-link:hover {
+  color: var(--accent-dim);
+}
+
 .settings-checkboxes {
   display: flex;
   flex-wrap: wrap;
