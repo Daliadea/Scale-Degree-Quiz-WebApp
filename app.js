@@ -11,13 +11,20 @@
   ];
 
   const EXTENSIONS = [
-    { id: '9',   label: '9',   semitones: 2 },
-    { id: 'b9',  label: '♭9',  semitones: 1 },
-    { id: '#9',  label: '#9',  semitones: 3 },
-    { id: '11',  label: '11',  semitones: 5 },
-    { id: '#11', label: '#11', semitones: 6 },
-    { id: '13',  label: '13',  semitones: 9 },
-    { id: 'b13', label: '♭13', semitones: 8 },
+    { id: 'b3',  label: 'minor 3rd',  semitones: 3 },
+    { id: '3',   label: 'major 3rd',  semitones: 4 },
+    { id: 'b5',  label: '♭5',         semitones: 6 },
+    { id: '5',   label: '5th',        semitones: 7 },
+    { id: '#5',  label: '#5',         semitones: 8 },
+    { id: 'b7',  label: 'minor 7th',  semitones: 10 },
+    { id: '7',   label: 'major 7th',  semitones: 11 },
+    { id: '9',   label: '9',          semitones: 2 },
+    { id: 'b9',  label: '♭9',         semitones: 1 },
+    { id: '#9',  label: '#9',         semitones: 3 },
+    { id: '11',  label: '11',         semitones: 5 },
+    { id: '#11', label: '#11',        semitones: 6 },
+    { id: '13',  label: '13',         semitones: 9 },
+    { id: 'b13', label: '♭13',        semitones: 8 },
   ];
 
   const NOTE_SPELLINGS = [
@@ -34,8 +41,8 @@
   };
 
   function getPreferredSpelling(pc, extensionId) {
-    const flatExtensions = ['b9', 'b13'];
-    const sharpExtensions = ['#9', '#11'];
+    const flatExtensions = ['b3', 'b5', 'b7', 'b9', 'b13'];
+    const sharpExtensions = ['#5', '#9', '#11'];
     const spellings = PC_TO_SPELLINGS[pc];
     if (!spellings) return '?';
     const flat = spellings.find(s => s.length === 2 && s[1] === 'b');
@@ -66,42 +73,56 @@
     if (!state.soundEnabled) return;
     const ctx = getAudioContext();
     if (ctx.state === 'suspended') ctx.resume();
-    // A4 = 440 Hz; A is pitch class 9. semitones from A4 = (pc - 9) + (octave - 4) * 12
     const semitonesFromA4 = (pitchClass - 9) + (octave - 4) * 12;
     const freq = 440 * Math.pow(2, semitonesFromA4 / 12);
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = freq;
-    osc.type = 'sine';
-    gain.gain.setValueAtTime(0.15, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + durationMs / 1000);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + durationMs / 1000);
+    const now = ctx.currentTime;
+    const duration = durationMs / 1000;
+    const masterGain = ctx.createGain();
+    masterGain.connect(ctx.destination);
+    // Piano-like: fundamental + harmonics, quick attack and long decay
+    const partials = [
+      { freq: 1, gain: 1, type: 'sine' },
+      { freq: 2, gain: 0.5, type: 'sine' },
+      { freq: 3, gain: 0.25, type: 'triangle' },
+      { freq: 4, gain: 0.15, type: 'triangle' },
+    ];
+    partials.forEach(({ freq: mult, gain: g, type }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.frequency.value = freq * mult;
+      osc.type = type;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.12 * g, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      osc.start(now);
+      osc.stop(now + duration);
+    });
   }
 
   function playRootForQuestion(rootName) {
     const root = getRootByName(rootName);
     if (!root) return;
-    playNote(root.pc, 4, 500);
+    playNote(root.pc, 4, 2200);
   }
 
   function playAnswerNote(spelling) {
     const pc = SPELLING_TO_PC[spelling];
     if (pc === undefined) return;
-    playNote(pc, 5, 600);
+    playNote(pc, 4, 2200);
   }
 
   // --- State ---
   let state = {
+    gameStarted: false,
     mode: 'practice',
     correct: 0,
     incorrect: 0,
     mistakes: [],
     currentQuestion: null,
     selectedRoots: ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
-    selectedExtensions: ['9', 'b9', '#9', '11', '#11', '13', 'b13'],
+    selectedExtensions: ['b3', '3', '5', 'b7', '7'],
     challengeSecondsLeft: 0,
     challengeTimerId: null,
     soundEnabled: true,
@@ -149,29 +170,10 @@
     return { rootName, extId, extLabel, correctSpelling, pc };
   }
 
-  function getSpellingsForPitchClass(pc) {
-    return PC_TO_SPELLINGS[pc] || [];
-  }
-
-  function getAllSpellingsForGrid() {
-    const set = new Set();
-    NOTE_SPELLINGS.forEach(n => set.add(n));
-    return Array.from(set).sort((a, b) => {
-      const order = 'C D E F G A B'.split(' ');
-      const letter = (s) => s.replace(/[#bx]+$/i, '')[0];
-      const acc = (s) => {
-        const m = s.match(/([#b]*)(x)?$/i);
-        let v = (m && m[1]) || '';
-        if (m && m[2]) v += 'x';
-        return v;
-      };
-      const la = order.indexOf(letter(a)), lb = order.indexOf(letter(b));
-      if (la !== lb) return la - lb;
-      const aa = acc(a), ab = acc(b);
-      const accOrder = ['bb', 'b', '', '#', 'x'];
-      return accOrder.indexOf(aa) - accOrder.indexOf(ab);
-    });
-  }
+  // Piano layout: 12 keys per octave. 0=C, 1=C#, 2=D, ... 11=B. White = 0,2,4,5,7,9,11; black = 1,3,6,8,10.
+  const PIANO_KEY_LABELS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const PIANO_WHITE = [0, 2, 4, 5, 7, 9, 11];
+  const PIANO_BLACK = [1, 3, 6, 8, 10];
 
   // --- DOM ---
   const el = (id) => document.getElementById(id);
@@ -198,44 +200,47 @@
     state.flipped = false;
     if (!q) {
       el('question-text').innerHTML = 'No roots or extensions selected. Open <strong>Settings</strong> to choose them.';
-      el('q-extension').textContent = '';
-      el('q-root').textContent = '';
       el('btn-flip').classList.add('hidden');
-      renderNoteGrid([]);
+      renderPianoKeyboard([]);
       return;
     }
     el('question-text').innerHTML = `What note is the <span class="highlight" id="q-extension">${q.extLabel}</span> of <span class="highlight" id="q-root">${q.rootName}</span> ?`;
     el('btn-flip').classList.remove('hidden');
-    const spellings = getAllSpellingsForGrid();
-    renderNoteGrid(spellings, q.correctSpelling);
+    renderPianoKeyboard([0,1,2,3,4,5,6,7,8,9,10,11, 0,1,2,3,4,5,6,7,8,9,10,11]);
     playRootForQuestion(q.rootName);
   }
 
-  function renderNoteGrid(spellings, correctSpelling) {
-    const grid = el('note-grid');
-    grid.innerHTML = '';
-    if (!spellings.length) return;
-    spellings.forEach(note => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'note-btn';
-      btn.textContent = note;
-      btn.dataset.note = note;
-      btn.addEventListener('click', () => onNoteClick(note));
-      grid.appendChild(btn);
+  function renderPianoKeyboard(pitchClasses) {
+    const container = el('piano-keyboard');
+    container.innerHTML = '';
+    if (!pitchClasses.length) return;
+    const row = document.createElement('div');
+    row.className = 'piano-keys-row';
+    pitchClasses.forEach((pc, i) => {
+      const isWhite = PIANO_WHITE.includes(pc);
+      const key = document.createElement('button');
+      key.type = 'button';
+      key.className = 'piano-key piano-key--' + (isWhite ? 'white' : 'black');
+      key.dataset.pitchClass = String(pc);
+      key.setAttribute('aria-label', PIANO_KEY_LABELS[pc]);
+      key.textContent = PIANO_KEY_LABELS[pc];
+      key.addEventListener('click', () => submitAnswerByPitchClass(pc, key));
+      row.appendChild(key);
     });
+    container.appendChild(row);
   }
 
-  function onNoteClick(selectedNote) {
+  function submitAnswerByPitchClass(selectedPc, clickedKeyEl) {
     const q = state.currentQuestion;
     if (!q) return;
-    const correct = selectedNote === q.correctSpelling;
-    const buttons = el('note-grid').querySelectorAll('.note-btn');
-    buttons.forEach(btn => {
-      btn.disabled = true;
-      if (btn.dataset.note === q.correctSpelling) btn.classList.add('correct');
-      else if (btn.dataset.note === selectedNote && !correct) btn.classList.add('incorrect');
+    const correct = selectedPc === q.pc;
+    const keys = el('piano-keyboard').querySelectorAll('.piano-key');
+    keys.forEach(key => {
+      key.disabled = true;
+      const pc = parseInt(key.dataset.pitchClass, 10);
+      if (pc === q.pc) key.classList.add('correct');
     });
+    if (!correct) clickedKeyEl.classList.add('incorrect');
     if (correct) {
       state.correct++;
       hideFeedback();
@@ -247,7 +252,8 @@
       }
     } else {
       state.incorrect++;
-      state.mistakes.push({ root: q.rootName, ext: q.extLabel, correct: q.correctSpelling, wrong: selectedNote });
+      const wrongLabel = PIANO_KEY_LABELS[selectedPc];
+      state.mistakes.push({ root: q.rootName, ext: q.extLabel, correct: q.correctSpelling, wrong: wrongLabel });
       showFeedback(`Oops! The ${q.extLabel} of ${q.rootName} is ${q.correctSpelling}`);
       if (state.mode === 'practice') {
         setTimeout(nextQuestion, 2000);
@@ -269,11 +275,9 @@
     if (!state.currentQuestion || state.flipped) return;
     state.flipped = true;
     const q = state.currentQuestion;
-    const btn = el('note-grid').querySelector(`[data-note="${q.correctSpelling}"]`);
-    if (btn) {
-      btn.classList.add('revealed');
-      btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
+    const keys = el('piano-keyboard').querySelectorAll(`[data-pitch-class="${q.pc}"]`);
+    keys.forEach(key => key.classList.add('revealed'));
+    if (keys.length) keys[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   // --- Modes ---
@@ -446,8 +450,20 @@
     el('btn-theme').addEventListener('click', toggleTheme);
     el('btn-sound').addEventListener('click', toggleSound);
 
+    el('btn-start-game').addEventListener('click', startGame);
+
     updateStats();
-    nextQuestion();
+  }
+
+  function startGame() {
+    state.gameStarted = true;
+    el('start-card').classList.add('hidden');
+    el('game-content').classList.remove('hidden');
+    if (state.mode === 'challenge') {
+      startChallenge();
+    } else {
+      nextQuestion();
+    }
   }
 
   if (document.readyState === 'loading') {

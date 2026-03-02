@@ -45,6 +45,11 @@
   </div>
 
   <main class="main">
+    <div class="card start-card" id="start-card">
+      <p class="start-message">Choose your mode above, then click to begin.</p>
+      <button type="button" class="btn btn-start" id="btn-start-game">Start game</button>
+    </div>
+    <div class="game-content hidden" id="game-content">
     <div class="card question-card">
       <p class="question-text" id="question-text">What note is the <span class="highlight" id="q-extension">#11</span> of <span class="highlight" id="q-root">D</span> ?</p>
       <button type="button" class="btn btn-flip" id="btn-flip">
@@ -54,8 +59,9 @@
     </div>
 
     <div class="card answer-card">
-      <h2 class="answer-label">SELECT THE CORRECT SPELLING:</h2>
-      <div class="note-grid" id="note-grid"></div>
+      <h2 class="answer-label">CLICK A KEY TO ANSWER:</h2>
+      <div class="piano-keyboard" id="piano-keyboard"></div>
+    </div>
     </div>
   </main>
 

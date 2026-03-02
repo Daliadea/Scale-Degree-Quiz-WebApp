@@ -266,6 +266,26 @@ body {
   margin-bottom: 1rem;
 }
 
+.start-card {
+  text-align: center;
+  padding: 2rem;
+}
+
+.start-message {
+  margin: 0 0 1.25rem;
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+
+.btn-start {
+  font-size: 1.1rem;
+  padding: 0.75rem 2rem;
+}
+
+.game-content.hidden {
+  display: none;
+}
+
 .question-card {
   text-align: center;
 }
@@ -290,51 +310,100 @@ body {
   letter-spacing: 0.05em;
 }
 
-/* Note grid */
-.note-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
-  gap: 0.5rem;
+/* Piano keyboard */
+.piano-keyboard {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 140px;
+  padding: 0;
+  user-select: none;
 }
 
-.note-btn {
-  padding: 0.6rem;
-  border-radius: 8px;
-  border: 2px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 0.95rem;
-  font-weight: 600;
+.piano-keys-row {
+  position: relative;
+  display: flex;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.piano-key {
+  border: none;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, transform 0.1s;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0;
+  transition: transform 0.05s, box-shadow 0.1s, background 0.15s;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 0.5rem;
 }
 
-.note-btn:hover:not(:disabled) {
-  background: var(--bg-card-hover);
-  border-color: var(--accent-dim);
+.piano-key:active {
+  transform: scale(0.98);
 }
 
-.note-btn:disabled {
+.piano-key:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.piano-key:disabled {
   cursor: default;
-  opacity: 0.7;
 }
 
-.note-btn.correct {
-  border-color: var(--correct);
-  background: rgba(158, 206, 106, 0.2);
-  color: var(--correct);
+.piano-key--white {
+  width: 2.2rem;
+  min-width: 28px;
+  height: 120px;
+  background: linear-gradient(180deg, #f5f5f5 0%, #e8e8e8 100%);
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 0 0 6px 6px;
+  z-index: 1;
 }
 
-.note-btn.incorrect {
-  border-color: var(--incorrect);
-  background: rgba(247, 118, 142, 0.2);
-  color: var(--incorrect);
+.piano-key--black {
+  width: 1.4rem;
+  min-width: 18px;
+  height: 72px;
+  background: linear-gradient(180deg, #2a2a2a 0%, #111 100%);
+  color: #eee;
+  margin-left: -0.7rem;
+  margin-right: -0.7rem;
+  z-index: 2;
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  font-size: 0.6rem;
 }
 
-.note-btn.revealed {
-  border-color: var(--flip);
-  background: rgba(224, 175, 104, 0.15);
+[data-theme="light"] .piano-key--white {
+  background: linear-gradient(180deg, #fff 0%, #f0f0f0 100%);
+  color: #222;
+  border-color: #bbb;
+}
+
+[data-theme="light"] .piano-key--black {
+  background: linear-gradient(180deg, #333 0%, #1a1a1a 100%);
+  color: #eee;
+}
+
+.piano-key.correct {
+  background: rgba(158, 206, 106, 0.5) !important;
+  box-shadow: inset 0 0 0 3px var(--correct);
+}
+
+.piano-key.incorrect {
+  background: rgba(247, 118, 142, 0.4) !important;
+  box-shadow: inset 0 0 0 3px var(--incorrect);
+}
+
+.piano-key.revealed {
+  background: rgba(224, 175, 104, 0.4) !important;
+  box-shadow: inset 0 0 0 2px var(--flip);
 }
 
 /* Modal */
